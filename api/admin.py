@@ -4,6 +4,7 @@ from django.contrib import admin
 import redis
 from .models import Task, Reminder, QuoteSchedule
 from .utils import publish_to_redis  # Import the standalone function
+from config.settings import REDIS_URL, REDIS_PORT, REDIS_PASSWORD
 import logging
 
 # Configure logging
@@ -17,15 +18,20 @@ logging.basicConfig(
     ]
 )
 
-# Test Redis connection at module level
 try:
-    redis_client = redis.Redis(host='localhost', port=6379, db=0)
+    redis_client = redis.Redis(
+        host=REDIS_URL, 
+        port=REDIS_PORT, 
+        db=0, 
+        password=REDIS_PASSWORD  # Add the password here
+    )
     redis_client.ping()
     print("Redis connection successful", flush=True)
     logger.info("Redis connection established")
 except Exception as e:
     print(f"Redis connection failed: {e}", flush=True)
     logger.error(f"Redis connection error: {e}")
+
 
 # TaskAdmin class
 @admin.register(Task)
