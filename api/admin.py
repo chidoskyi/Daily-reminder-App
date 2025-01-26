@@ -3,6 +3,7 @@ import sys
 from django.contrib import admin
 import redis
 from .models import Task, Reminder, QuoteSchedule
+from unfold.admin import ModelAdmin
 from .utils import publish_to_redis  # Import the standalone function
 from config.settings import REDIS_URL, REDIS_PORT, REDIS_PASSWORD
 import logging
@@ -35,7 +36,8 @@ except Exception as e:
 
 # TaskAdmin class
 @admin.register(Task)
-class TaskAdmin(admin.ModelAdmin):
+# class TaskAdmin(admin.ModelAdmin):
+class TaskAdmin(ModelAdmin):
     list_display = ('title', 'user', 'start_date', 'end_date', 'time', 'daily_reminder')
     list_filter = ('start_date', 'end_date', 'daily_reminder')
     search_fields = ('title', 'description', 'user__username')
@@ -55,13 +57,13 @@ class TaskAdmin(admin.ModelAdmin):
             logger.error(f"Error in save_model: {e}", exc_info=True)
 
 @admin.register(Reminder)
-class ReminderAdmin(admin.ModelAdmin):
+class ReminderAdmin(ModelAdmin):
     list_display = ('title', 'user', 'datetime', 'is_completed')
     list_filter = ('is_completed', 'datetime')
     search_fields = ('title', 'user__username')
 
 @admin.register(QuoteSchedule)
-class QuoteScheduleAdmin(admin.ModelAdmin):
+class QuoteScheduleAdmin(ModelAdmin):
     list_display = ('user', 'scheduled_time', 'is_active')
     list_filter = ('is_active', 'scheduled_time')
     search_fields = ('user__username',)

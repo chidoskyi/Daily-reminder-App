@@ -39,7 +39,14 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'django_admin_dracula',
+    "unfold",  # before django.contrib.admin
+    "unfold.contrib.filters",  # optional, if special filters are needed
+    "unfold.contrib.forms",  # optional, if special form elements are needed
+    "unfold.contrib.inlines",  # optional, if special inlines are needed
+    "unfold.contrib.import_export",  # optional, if django-import-export package is used
+    "unfold.contrib.guardian",  # optional, if django-guardian package is used
+    "unfold.contrib.simple_history",  # optional, if django-simple-history package is used
+    # 'django_admin_dracula',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -190,9 +197,12 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')  # Admin email for notifications
 
 
-ADMIN_SITE_HEADER = "My Custom Admin Panel"
-ADMIN_SITE_TITLE = "My Project Admin"
-ADMIN_INDEX_TITLE = "Welcome to My Dashboard"
+UNFOLD = {
+    "SITE_TITLE": "My Admin Panel",
+    "SITE_HEADER": "Welcome to My Admin Panel",
+    "SITE_ICON": "path/to/icon.png",
+    "THEME": "dark",  # or "light"
+}
 
 LOGGING = {
     'version': 1,

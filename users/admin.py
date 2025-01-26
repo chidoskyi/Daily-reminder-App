@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from unfold.admin import ModelAdmin
 from .models import User
 
-class CustomUserAdmin(UserAdmin):
+@admin.register(User)
+class CustomUserAdmin(ModelAdmin):
     # Define the fields to display in the admin interface
     list_display = ('email', 'username', 'uid', 'is_staff', 'is_active', 'created_at', 'updated_at')
     list_filter = ('is_staff', 'is_active', 'groups')
@@ -28,4 +30,4 @@ class CustomUserAdmin(UserAdmin):
     )
 
 # Register the custom user model with the admin interface
-admin.site.register(User, CustomUserAdmin)
+# admin.site.register(User, CustomUserAdmin)
