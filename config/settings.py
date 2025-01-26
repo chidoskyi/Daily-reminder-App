@@ -124,6 +124,7 @@ SIMPLE_JWT = {
 REDIS_URL = os.getenv('REDIS_URL')
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 REDIS_PORT = os.getenv('REDIS_PORT')
+PORT = os.getenv("PORT", "")
 
 
 

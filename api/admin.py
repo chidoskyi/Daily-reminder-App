@@ -5,7 +5,7 @@ import redis
 from .models import Task, Reminder, QuoteSchedule
 from unfold.admin import ModelAdmin
 from .utils import publish_to_redis  # Import the standalone function
-from config.settings import REDIS_URL, REDIS_PORT, REDIS_PASSWORD
+from config.settings import REDIS_URL, REDIS_PORT, REDIS_PASSWORD, PORT
 import logging
 
 # Configure logging
@@ -18,6 +18,11 @@ logging.basicConfig(
         logging.StreamHandler(sys.stderr)
     ]
 )
+
+if not PORT:
+    PORT = "8080"
+    print("PORT was empty. Defaulting to 8080.", flush=True)
+    logger.info("PORT was empty. Set to default: 8080.")
 
 try:
     redis_client = redis.Redis(
