@@ -2,10 +2,12 @@
     "cSpell.words": [
         "dotenv",
         "godotenv",
+        "gunicorn",
         "joho",
         "levelname",
         "redns",
         "Supabase",
-        "viewsets"
+        "viewsets",
+        "wsgi"
     ]
 }
