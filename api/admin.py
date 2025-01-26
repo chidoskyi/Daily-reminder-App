@@ -63,8 +63,8 @@ class TaskAdmin(ModelAdmin):
 
 @admin.register(Reminder)
 class ReminderAdmin(ModelAdmin):
-    list_display = ('title', 'user', 'datetime', 'is_completed')
-    list_filter = ('is_completed', 'datetime')
+    list_display = ('title', 'user', 'reminder_datetime', 'is_completed')
+    list_filter = ('is_completed', 'reminder_datetime')
     search_fields = ('title', 'user__username')
 
 @admin.register(QuoteSchedule)

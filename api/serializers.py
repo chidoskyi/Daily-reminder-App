@@ -6,18 +6,18 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
-        read_only_fields = ('id',)
+        read_only_fields = ('uid',)
 
 
 class ReminderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reminder
         fields = '__all__'
-        read_only_fields = ('id',)
+        read_only_fields = ('uid',)
 
 
 class QuoteScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuoteSchedule
         fields = '__all__'
-        read_only_fields = ('id',)
+        read_only_fields = ('uid',)

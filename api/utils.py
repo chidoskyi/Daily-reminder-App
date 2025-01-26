@@ -1,3 +1,5 @@
+# tasks/utils.py
+
 import json
 import redis
 import logging
@@ -15,32 +17,28 @@ redis_client = redis.Redis(
     socket_connect_timeout=5
 )
 
-# Initialize Redis client
-# redis_client = redis.Redis(host='localhost', port=6379, db=0)
-
-def publish_to_redis(task):
+def publish_to_redis(reminder):
     """
-    Publish task data to Redis.
+    Publish reminder data to Redis.
     """
     print(">>>>>> PUBLISH TO REDIS METHOD CALLED <<<<<<", flush=True)
     logger.debug("Publish to Redis method initiated")
     
     try:
-        # Print task details for debugging
-        print(f"Task Details:", flush=True)
-        print(f"UID: {task.uid}", flush=True)
-        print(f"Title: {task.title}", flush=True)
-        print(f"User ID: {task.user.uid}", flush=True)
+        # Print reminder details for debugging
+        print(f"Reminder Details:", flush=True)
+        print(f"UID: {reminder.uid}", flush=True)
+        print(f"Title: {reminder.title}", flush=True)
+        print(f"User ID: {reminder.user.uid}", flush=True)
+        print(f"Reminder Datetime: {reminder.reminder_datetime}", flush=True)
 
         message = {
-            'action': 'task_scheduled',
-            'task_id': str(task.uid),  
-            'task_name': task.title,
-            'user_id': str(task.user.uid),
-            'start_date': task.start_date.isoformat(),
-            'end_date': task.end_date.isoformat(),
-            'time': task.time.isoformat(),
-            'daily_reminder': task.daily_reminder,
+            'action': 'reminder_scheduled',
+            'reminder_id': str(reminder.uid),  
+            'title': reminder.title,
+            'user_id': str(reminder.user.uid),
+            'reminder_datetime': reminder.reminder_datetime.isoformat(),
+            'email': reminder.user.email,  # Add user's email for notifications
         }
         
         print(f"Message to publish: {message}", flush=True)
@@ -52,7 +50,7 @@ def publish_to_redis(task):
         
         # Publish to Redis
         try:
-            receivers = redis_client.publish('tasks', serialized_message)
+            receivers = redis_client.publish('reminders', serialized_message)
             print(f"Message published. Receivers: {receivers}", flush=True)
             logger.info(f"Published to Redis. Receivers: {receivers}")
         except Exception as publish_error:
