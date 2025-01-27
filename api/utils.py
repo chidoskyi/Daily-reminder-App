@@ -1,5 +1,3 @@
-# tasks/utils.py
-
 import json
 import redis
 import logging
@@ -19,7 +17,7 @@ redis_client = redis.Redis(
 
 def publish_to_redis(reminder):
     """
-    Publish reminder data to Redis.
+    Publish reminder data to Redis Stream.
     """
     print(">>>>>> PUBLISH TO REDIS METHOD CALLED <<<<<<", flush=True)
     logger.debug("Publish to Redis method initiated")
@@ -33,7 +31,6 @@ def publish_to_redis(reminder):
         print(f"Reminder Datetime: {reminder.reminder_datetime}", flush=True)
 
         message = {
-            'action': 'reminder_scheduled',
             'reminder_id': str(reminder.uid),  
             'title': reminder.title,
             'user_id': str(reminder.user.uid),
@@ -44,15 +41,11 @@ def publish_to_redis(reminder):
         print(f"Message to publish: {message}", flush=True)
         logger.debug(f"Prepared message: {message}")
         
-        # Serialize message
-        serialized_message = json.dumps(message, separators=(',', ':'))
-        print(f"Serialized message: {serialized_message}", flush=True)
-        
-        # Publish to Redis
+        # Publish to Redis Stream
         try:
-            receivers = redis_client.publish('reminders', serialized_message)
-            print(f"Message published. Receivers: {receivers}", flush=True)
-            logger.info(f"Published to Redis. Receivers: {receivers}")
+            redis_client.xadd('reminders', message)
+            print(f"Message published to Redis Stream.", flush=True)
+            logger.info("Published to Redis Stream.")
         except Exception as publish_error:
             print(f"Redis publish error: {publish_error}", flush=True)
             logger.error(f"Redis publish error: {publish_error}", exc_info=True)

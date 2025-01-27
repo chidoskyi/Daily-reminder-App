@@ -47,24 +47,11 @@ class TaskAdmin(ModelAdmin):
     list_filter = ('start_date', 'end_date', 'daily_reminder')
     search_fields = ('title', 'description', 'user__username')
 
-    def save_model(self, request, obj, form, change):
-        print(">>>>>> SAVE MODEL CALLED <<<<<<", flush=True)
-        logger.debug("Save model method triggered")
-        
-        try:
-            # First save the model
-            super().save_model(request, obj, form, change)
-            
-            # Then publish to Redis
-            publish_to_redis(obj)  # Call the standalone function
-        except Exception as e:
-            print(f"ERROR in save_model: {e}", flush=True)
-            logger.error(f"Error in save_model: {e}", exc_info=True)
 
 @admin.register(Reminder)
 class ReminderAdmin(ModelAdmin):
-    list_display = ('title', 'user', 'reminder_datetime', 'is_completed')
-    list_filter = ('is_completed', 'reminder_datetime')
+    list_display = ('title', 'user', 'reminder_datetime',  'is_completed')
+    list_filter = ('is_completed', 'reminder_datetime','sent', 'user')
     search_fields = ('title', 'user__username')
 
 @admin.register(QuoteSchedule)
