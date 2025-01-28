@@ -39,10 +39,12 @@ class UserViewSet(viewsets.GenericViewSet):
             user = User.objects.get(email=email)
             if user.check_password(password):
                 refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                request.session['session-name'] = access_token
                 return Response({
                     'user': UserSerializer(user).data,
                     'refresh': str(refresh),
-                    'access': str(refresh.access_token)
+                    'access': str(access_token)
                 }, status=status.HTTP_200_OK)
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
@@ -53,6 +55,18 @@ class UserViewSet(viewsets.GenericViewSet):
         response = TokenRefreshView.as_view()(request._request)
         return Response(response.data, status=response.status_code)
     
+    @action(detail=False, methods=['get'], url_path='get-token')
+    def get_jwt_token(request):
+        if request.user.is_authenticated:
+            refresh = RefreshToken.for_user(request.user)
+            access_token = str(refresh.access_token)
+            return Response({
+                'access': access_token,
+                'refresh': str(refresh)
+            })
+        return Response({'error': 'User not authenticated'}, status=401)
+
+    
     @action(detail=False, methods=['get'], url_path='get-user')
     def get_user(self, request):
         """
@@ -61,5 +75,10 @@ class UserViewSet(viewsets.GenericViewSet):
         user = request.user
         if user.is_authenticated:
             serializer = self.get_serializer(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            return Response({
+                "user":serializer.data,
+                'access': access_token
+                }, status=status.HTTP_200_OK)
         return Response({'error': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)

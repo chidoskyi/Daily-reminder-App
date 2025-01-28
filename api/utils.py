@@ -1,6 +1,8 @@
 import json
 import redis
 import logging
+from datetime import datetime, timezone
+from rest_framework_simplejwt.tokens import RefreshToken
 from config.settings import REDIS_URL, REDIS_PORT, REDIS_PASSWORD
 
 logger = logging.getLogger(__name__)
@@ -10,46 +12,53 @@ redis_client = redis.Redis(
     host=REDIS_URL,
     port=REDIS_PORT,
     db=0,
-    password=REDIS_PASSWORD,  # Add password if required
+    password=REDIS_PASSWORD,
     socket_timeout=5,
     socket_connect_timeout=5
 )
 
-def publish_to_redis(reminder):
+def publish_to_redis(reminder, action="created"):
     """
-    Publish reminder data to Redis Stream.
+    Publish reminder data to Redis Stream with proper datetime handling and user authentication.
+    
+    Args:
+        reminder: The reminder object to publish.
+        action: The action associated with the reminder (e.g., "created" or "scheduled").
     """
-    print(">>>>>> PUBLISH TO REDIS METHOD CALLED <<<<<<", flush=True)
     logger.debug("Publish to Redis method initiated")
     
     try:
-        # Print reminder details for debugging
-        print(f"Reminder Details:", flush=True)
-        print(f"UID: {reminder.uid}", flush=True)
-        print(f"Title: {reminder.title}", flush=True)
-        print(f"User ID: {reminder.user.uid}", flush=True)
-        print(f"Reminder Datetime: {reminder.reminder_datetime}", flush=True)
+        # Ensure reminder_datetime is in UTC
+        if reminder.reminder_datetime.tzinfo is None:
+            reminder_datetime = reminder.reminder_datetime.replace(tzinfo=timezone.utc)
+        else:
+            reminder_datetime = reminder.reminder_datetime.astimezone(timezone.utc)
 
+        # Generate access token for the user
+        refresh = RefreshToken.for_user(reminder.user)
+        access_token = str(refresh.access_token)
+        
         message = {
-            'reminder_id': str(reminder.uid),  
+            'reminder_id': str(reminder.uid),
             'title': reminder.title,
             'user_id': str(reminder.user.uid),
-            'reminder_datetime': reminder.reminder_datetime.isoformat(),
-            'email': reminder.user.email,  # Add user's email for notifications
+            'reminder_datetime': reminder_datetime.isoformat(),
+            'email': reminder.user.email,
+            'sent': str(reminder.sent).lower(),  # Ensure boolean is converted to string
+            'action': 'scheduled' if not reminder.sent else 'created',  # Set action based on sent status
+            'schedule_time': str(int(reminder_datetime.timestamp())),  # Add Unix timestamp for easier scheduling
+            'access_token': access_token  # Add the access token
+            
         }
-        
-        print(f"Message to publish: {message}", flush=True)
+
         logger.debug(f"Prepared message: {message}")
         
         # Publish to Redis Stream
-        try:
-            redis_client.xadd('reminders', message)
-            print(f"Message published to Redis Stream.", flush=True)
-            logger.info("Published to Redis Stream.")
-        except Exception as publish_error:
-            print(f"Redis publish error: {publish_error}", flush=True)
-            logger.error(f"Redis publish error: {publish_error}", exc_info=True)
+        stream_id = redis_client.xadd('reminders', message)
+        logger.info(f"Published to Redis Stream with ID: {stream_id}")
+        
+        return True
         
     except Exception as e:
-        print(f"CRITICAL ERROR: {e}", flush=True)
         logger.critical(f"Critical error in Redis publishing: {e}", exc_info=True)
+        return False

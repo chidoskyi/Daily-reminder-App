@@ -1,7 +1,10 @@
+from django.utils import timezone
+from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from users.models import User
 from django.db import models
 import uuid
+from django.db.models import Q
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -40,15 +43,78 @@ class Task(models.Model):
     def clean(self):
         if self.end_date and self.end_date < self.start_date:
             raise ValidationError('End date cannot be before start date.')
+
     
    
 class Reminder(models.Model):
     uid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="reminders")
     title = models.CharField(max_length=200)
     reminder_datetime = models.DateTimeField()
     sent = models.BooleanField(default=False)
     is_completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
+    
+    def clean(self):
+        super().clean()
+        if not self.reminder_datetime:
+            raise ValidationError({
+                'reminder_datetime': 'Reminder datetime is required.'
+            })
+
+        # Ensure the datetime is timezone-aware
+        if timezone.is_naive(self.reminder_datetime):
+            self.reminder_datetime = timezone.make_aware(self.reminder_datetime)
+        
+        # Get current time (timezone-aware)
+        now = timezone.now()
+        
+        # For new reminders, ensure datetime is in the future
+        if not self.pk and self.reminder_datetime <= now:
+            raise ValidationError({
+                'reminder_datetime': 'Reminder datetime must be at least 1 minute in the future.'
+            })
+        
+        # For existing reminders being updated
+        elif self.pk:
+            # Allow updating other fields even if datetime has passed
+            pass
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        
+        # Handle existing reminders
+        if self.pk is not None:
+            now = timezone.now()
+            # Mark as completed if datetime has passed
+            if self.reminder_datetime <= now:
+                self.is_completed = True
+        
+        super().save(*args, **kwargs)
+        
+        
+    @classmethod
+    def update_completed_status(cls):
+        """
+        Update is_completed status for all reminders where reminder_datetime has passed.
+        Returns the number of reminders updated.
+        """
+        current_time = timezone.now()
+        updated_count = cls.objects.filter(
+            Q(reminder_datetime__lte=current_time) & 
+            Q(is_completed=False)
+        ).update(is_completed=True)
+        return updated_count
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['reminder_datetime', 'is_completed']),
+        ]
+        ordering = ['reminder_datetime']
+
     
     
 class QuoteSchedule(models.Model):

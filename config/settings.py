@@ -87,6 +87,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
+# settings.py
+USE_TZ = True
+TIME_ZONE = 'UTC'  # Keep server time in UTC
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

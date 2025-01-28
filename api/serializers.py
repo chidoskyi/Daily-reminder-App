@@ -13,7 +13,7 @@ class ReminderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reminder
         fields = '__all__'
-        read_only_fields = ('uid',)
+        read_only_fields = ('uid','user',)
 
 
 class QuoteScheduleSerializer(serializers.ModelSerializer):

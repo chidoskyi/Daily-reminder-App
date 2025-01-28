@@ -8,6 +8,7 @@
         "redns",
         "Supabase",
         "viewsets",
-        "wsgi"
+        "wsgi",
+        "xadd"
     ]
 }
