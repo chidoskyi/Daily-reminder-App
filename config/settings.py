@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django_admin_cdn',  # Add this line
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
