@@ -1,0 +1,145 @@
+import logging
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from api.utils import publish_to_redis
+from .models import Reminder, Task
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
+
+def create_snooze_reminder(task, main_reminder_datetime, snooze_minutes):
+    """Create a snooze reminder before the main reminder time"""
+    snooze_datetime = main_reminder_datetime - timedelta(minutes=snooze_minutes)
+    
+    # Only create snooze if it's in the future
+    if snooze_datetime > datetime.now():
+        return Reminder.objects.create(
+            user=task.user,
+            task=task,
+            title=f"⏰ {snooze_minutes}min reminder: {task.title}",
+            reminder_datetime=snooze_datetime,
+            sent=False,
+            is_completed=False,
+            is_snooze=True,
+            snooze_minutes=snooze_minutes
+        )
+
+def create_reminder_with_snoozes(task, reminder_datetime, is_recurring=False, is_daily=False):
+    """Create a main reminder with user-configured snooze reminders"""
+    try:
+        # Create the main reminder
+        reminder_type = "Recurring" if is_recurring else "Daily" if is_daily else ""
+        title_prefix = f"{reminder_type} Reminder: " if reminder_type else "Reminder: "
+        
+        main_reminder = Reminder.objects.create(
+            user=task.user,
+            task=task,
+            title=f"{title_prefix}{task.title}",
+            reminder_datetime=reminder_datetime,
+            sent=False,
+            is_completed=False,
+            is_snooze=False
+        )
+        
+        # Create user-configured snooze reminders
+        if task.snooze_times:
+            for snooze_time in sorted(task.snooze_times, reverse=True):  # Sort in descending order
+                snooze_reminder = create_snooze_reminder(task, reminder_datetime, snooze_time)
+                if snooze_reminder:
+                    logger.info(f"Created {snooze_time}min snooze reminder for task: {task.title}")
+        
+        return main_reminder
+        
+    except Exception as e:
+        logger.error(f"Error creating reminder with snoozes: {str(e)}", exc_info=True)
+        raise
+
+@receiver(post_save, sender=Task)
+def create_reminder_from_task(sender, instance, created, **kwargs):
+    """Signal to create Reminder instances with user-configured snooze notifications"""
+    try:
+        current_time = datetime.now()
+        base_reminder_datetime = datetime.combine(instance.start_date, instance.time)
+        
+        logger.info(f"""
+        Task Save Signal Triggered:
+        Task: {instance.title}
+        DateTime: {base_reminder_datetime}
+        Snooze Times: {instance.snooze_times}
+        Daily: {instance.daily_reminder}
+        Recurring: {instance.is_recurring}
+        Pattern: {instance.recurrence_pattern}
+        """)
+
+        # Create initial reminder with snoozes if it's a new task
+        if created and base_reminder_datetime > current_time:
+            create_reminder_with_snoozes(instance, base_reminder_datetime)
+
+        # Handle daily reminders
+        if instance.daily_reminder:
+            current_date = instance.start_date
+            while current_date <= instance.end_date:
+                reminder_datetime = datetime.combine(current_date, instance.time)
+                if reminder_datetime != base_reminder_datetime and reminder_datetime > current_time:
+                    create_reminder_with_snoozes(instance, reminder_datetime, is_daily=True)
+                current_date += timedelta(days=1)
+
+        # Handle recurring reminders
+        elif instance.is_recurring and instance.recurrence_pattern:
+            next_reminder_date = instance.start_date
+            step = {
+                'daily': timedelta(days=1),
+                'weekly': timedelta(weeks=1),
+                'monthly': timedelta(days=30)
+            }.get(instance.recurrence_pattern)
+            
+            if step:
+                for _ in range(5):  # Create next 5 occurrences
+                    next_reminder_date += step
+                    if next_reminder_date <= instance.end_date:
+                        next_reminder_datetime = datetime.combine(next_reminder_date, instance.time)
+                        if next_reminder_datetime > current_time:
+                            create_reminder_with_snoozes(instance, next_reminder_datetime, is_recurring=True)
+
+    except Exception as e:
+        logger.error(f"Error in create_reminder_from_task: {str(e)}", exc_info=True)
+        raise
+
+http://127.0.0.1:8000/api/tasks/    post, get
+http://127.0.0.1:8000/api/reminder/ post, get
+http://127.0.0.1:8000/api/users/login/    post
+http://127.0.0.1:8000/api/users/register/ post   
+http://127.0.0.1:8000/api/users/token-refresh/   post
+http://127.0.0.1:8000/api/users/get-token/   get
+http://127.0.0.1:8000/api/users/get-user/      get     
+
+Tasks:
+GET    /api/tasks/                    - List tasks
+POST   /api/tasks/                    - Create task
+GET    /api/tasks/{id}/               - Get task details
+PUT    /api/tasks/{id}/               - Update task
+DELETE /api/tasks/{id}/               - Delete task
+POST   /api/tasks/{id}/mark_completed/ - Mark task completed
+GET    /api/tasks/upcoming/           - List upcoming tasks
+GET    /api/tasks/completed/          - List completed tasks
+GET    /api/tasks/by_category/        - List tasks by category
+
+Reminders:
+GET    /api/reminders/                - List reminders
+POST   /api/reminders/                - Create reminder
+GET    /api/reminders/{id}/           - Get reminder details
+PUT    /api/reminders/{id}/           - Update reminder
+DELETE /api/reminders/{id}/           - Delete reminder
+POST   /api/reminders/{id}/mark_sent/ - Mark reminder sent
+POST   /api/reminders/{id}/mark_completed/ - Mark reminder completed
+GET    /api/reminders/active/         - List active reminders
+GET    /api/reminders/completed/      - List completed reminders
+GET    /api/reminders/by_task/        - List reminders by task
+
+Categories:
+GET    /api/categories/               - List categories
+POST   /api/categories/               - Create category
+GET    /api/categories/{id}/          - Get category details
+PUT    /api/categories/{id}/          - Update category
+DELETE /api/categories/{id}/          - Delete category
+GET    /api/categories/my_categories/ - List user's categories

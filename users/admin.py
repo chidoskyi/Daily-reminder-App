@@ -1,33 +1,76 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from .models import CompletionRate, User, Profile, CompletionStats, BioDetails
 from unfold.admin import ModelAdmin
-from .models import User
 
 @admin.register(User)
-class CustomUserAdmin(ModelAdmin):
-    # Define the fields to display in the admin interface
-    list_display = ('email', 'username', 'uid', 'is_staff', 'is_active', 'created_at', 'updated_at')
-    list_filter = ('is_staff', 'is_active', 'groups')
-    search_fields = ('email', 'username', 'uid')
-    ordering = ('email',)
-
-    # Define the fields to use when editing a user
-    fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal Info', {'fields': ('username',)}),
-        ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
-        }),
-        ('Important Dates', {'fields': ('last_login', 'date_joined')}),  # Remove non-editable fields
-    )
+class CustomUserAdmin(UserAdmin):
+    list_display = ('email', 'username', 'is_active', 'is_staff', 'created_at')
+    list_filter = ('is_active', 'is_staff', 'created_at')
+    search_fields = ('email', 'username')
+    ordering = ('-created_at',)
     
-    # Define the fields to use when creating a user
+    fieldsets = (
+        (None, {'fields': ('email', 'username', 'password')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'created_at', 'updated_at')}),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'password1', 'password2', 'is_staff', 'is_active'),
+            'fields': ('email', 'username', 'password1', 'password2'),
         }),
     )
 
-# Register the custom user model with the admin interface
-# admin.site.register(User, CustomUserAdmin)
+@admin.register(Profile)
+class ProfileAdmin(ModelAdmin):
+    list_display = ('user', 'display_name', 'location', 'theme_preference', 'created_at')
+    list_filter = ('theme_preference', 'created_at')
+    search_fields = ('user__email', 'user__username', 'display_name', 'location')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user', 'display_name', 'avatar')
+        }),
+        ('Personal Details', {
+            'fields': ('bio', 'location', 'website', 'timezone')
+        }),
+        ('Preferences', {
+            'fields': ('theme_preference', 'notification_preferences')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(CompletionStats)
+class CompletionStatsAdmin(ModelAdmin):
+    list_display = ('profile', 'total', 'completed', 'active', 'completion_rate', 'updated_at')
+    readonly_fields = ('total', 'completed', 'active', 'completion_rate', 'updated_at')
+    search_fields = ('profile__user__email', 'profile__user__username')
+    ordering = ('-total',)
+    
+    def completion_rate(self, obj):
+        return f"{obj.completion_rate}%"
+    completion_rate.short_description = "Completion Rate"
+    
+    def has_add_permission(self, request):
+        return False  # Stats are created automatically
+
+@admin.register(BioDetails)
+class BioDetailsAdmin(ModelAdmin):
+    list_display = ('profile', 'location', 'timezone')
+    search_fields = ('profile__user__email', 'profile__user__username', 'location')
+    list_filter = ('timezone',)
+    
+@admin.register(CompletionRate)
+class CompletionRateAdmin(ModelAdmin):
+    list_display = ('profile', 'total', 'completed', 'active')
+    readonly_fields = ('total', 'completed', 'active')
+    search_fields = ('profile__user__username',)
+    ordering = ('-total',)
+

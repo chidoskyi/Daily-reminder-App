@@ -38,20 +38,38 @@ def publish_to_redis(reminder, action="created"):
         refresh = RefreshToken.for_user(reminder.user)
         access_token = str(refresh.access_token)
         
+        # Format snooze time display if applicable
+        snooze_display = ""
+        if reminder.is_snooze and reminder.snooze_minutes:
+            if reminder.snooze_minutes >= 60:
+                hours = reminder.snooze_minutes // 60
+                mins = reminder.snooze_minutes % 60
+                snooze_display = f"{hours}h{f' {mins}m' if mins else ''}"
+            else:
+                snooze_display = f"{reminder.snooze_minutes}m"
+        
         message = {
             'reminder_id': str(reminder.uid),
             'title': reminder.title,
             'user_id': str(reminder.user.uid),
             'reminder_datetime': reminder_datetime.isoformat(),
             'email': reminder.user.email,
-            'sent': str(reminder.sent).lower(),  # Ensure boolean is converted to string
-            'action': 'scheduled' if not reminder.sent else 'created',  # Set action based on sent status
-            'schedule_time': str(int(reminder_datetime.timestamp())),  # Add Unix timestamp for easier scheduling
-            'access_token': access_token  # Add the access token
-            
+            'sent': str(reminder.sent).lower(),
+            'action': action,
+            'schedule_time': str(int(reminder_datetime.timestamp())),
+            'access_token': access_token,
+            'is_snooze': str(reminder.is_snooze).lower(),
+            'snooze_minutes': str(reminder.snooze_minutes) if reminder.snooze_minutes is not None else '',
+            'snooze_display': snooze_display,
+            'snooze_times': json.dumps(reminder.task.snooze_times) if reminder.task.snooze_times else '[]',
+            'task_id': str(reminder.task.uid),
+            'priority': reminder.task.priority,
+            'is_completed': str(reminder.is_completed).lower()
         }
 
-        logger.debug(f"Prepared message: {message}")
+        logger.debug(f"Prepared message for Redis: reminder_id={message['reminder_id']}, "
+                    f"datetime={message['reminder_datetime']}, "
+                    f"is_snooze={message['is_snooze']}")
         
         # Publish to Redis Stream
         stream_id = redis_client.xadd('reminders', message)
