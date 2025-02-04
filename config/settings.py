@@ -69,6 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://daily-reminder-app-go-micro-services.onrender.com",
+    "https://next-js-django-reminders-c7xz.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
