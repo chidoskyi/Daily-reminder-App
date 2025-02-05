@@ -31,3 +31,4 @@ urlpatterns = [
     path('api/', include(v1_router.urls)),  # Tasks, reminders, and quote-schedules under /api/v1/
     path('api/', include(v2_router.urls)),  # Tasks, reminders, and quote-schedules under /api/v1/
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
